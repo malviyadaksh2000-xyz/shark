@@ -1,0 +1,88 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.role in ['admin', 'superadmin'] || 
+         request.auth.token.email.matches('.*admin.*@smartsaver[.]app'));
+    }
+    
+    // Public catalog reads
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /providerProducts/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /providers/{providerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /restaurants/{restaurantId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /providerRestaurants/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /menuItems/{menuItemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /offers/{offerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // User private data
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    match /priceAlerts/{alertId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+    
+    match /comparisonHistory/{historyId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+    
+    match /savingsSummary/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    match /userFavorites/{favoriteId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+  }
+}
